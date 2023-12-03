@@ -106,31 +106,47 @@ function buildFastifyWithMethod({ method, routePath, func }:
   );
 }
 
-function buildRoutePath(func: ts.FunctionDeclaration) {
+function buildMethodParams(func: ts.FunctionDeclaration) {
   const parameters = func.parameters;
 
   if (!parameters || parameters.length === 0) {
-    return { routePath: "", params: [] }
+    return { routePath: "", params: [], bodyParams: [] };
   }
 
   let routePath = "";
   const params: string[] = [];
+  const bodyParams: string[] = [];
 
   for (const param of parameters) {
     if (param.type && ts.isToken(param.type)) {
       params.push((param.name as ts.Identifier).escapedText as string);
       routePath += `/:${(param.name as ts.Identifier).escapedText}`;
     }
+
+    if (param.type && ts.isTypeLiteralNode(param.type)) {
+      const properties = param.type.members;
+
+      if (!properties || properties.length === 0) {
+        continue;
+      }
+
+      for (const property of properties) {
+        if (ts.isPropertySignature(property)) {
+          bodyParams.push((property.name as ts.Identifier).escapedText as string);
+        }
+      }
+    }
   }
 
   return {
     routePath,
-    params
+    params,
+    bodyParams
   }
 }
 
 function buildFastifyRouteHandler(func: ts.FunctionDeclaration) {
-  const route = buildRoutePath(func);
+  const params = buildMethodParams(func);
 
   const parameters = ts.factory.createNodeArray([
     ts.factory.createParameterDeclaration(
@@ -151,69 +167,88 @@ function buildFastifyRouteHandler(func: ts.FunctionDeclaration) {
 
   let returnExpression = getRouteReturnStatement(func)?.expression;
 
-  if (route.params.length > 0) {
-    if (returnExpression && ts.isObjectLiteralExpression(returnExpression)) {
-      const properties = returnExpression.properties;
+  // if (params.params.length > 0) {
+  if (returnExpression && ts.isObjectLiteralExpression(returnExpression)) {
+    const properties = returnExpression.properties;
 
-      if (properties && properties.length > 0) {
-        // @ts-ignore
-        const templateSpans = properties.find((prop) => ts.isTemplateExpression(prop.initializer))?.initializer as ts.TemplateExpression;
+    if (properties && properties.length > 0) {
+      // @ts-ignore
+      const templateSpans = properties.find((prop) => ts.isTemplateExpression(prop.initializer))?.initializer as ts.TemplateExpression;
+      const templates: ts.TemplateSpan[] = [];
+
+      if (templateSpans) {
         const originalHead = templateSpans.head;
+        const templateSpansExpressions = templateSpans.templateSpans.map((span) => span.expression);
 
-        const templates: ts.TemplateSpan[] = [];
+        for (const templateSpansExpression of templateSpansExpressions) {
+          if (ts.isIdentifier(templateSpansExpression)) {
+            const param = params.params.find((param) => param === templateSpansExpression.escapedText);
 
-        if (templateSpans) {
-          const templateSpansExpressions = templateSpans.templateSpans.map((span) => span.expression);
-
-          for (const templateSpansExpression of templateSpansExpressions) {
-            if (ts.isIdentifier(templateSpansExpression)) {
-              const param = route.params.find((param) => param === templateSpansExpression.escapedText);
-              if (!param) {
-                continue
-              }
-
-              const expression = ts.factory.createPropertyAccessExpression(
-                ts.factory.createIdentifier("request.params"),
-                ts.factory.createIdentifier(param)
-              );
-
-              const originalTail = templateSpans.templateSpans.find((span) => span.expression === templateSpansExpression)?.literal;
-              // console.log(ts.createPrinter().printNode(ts.EmitHint.Unspecified, originalTail as ts.TemplateTail, ts.createSourceFile("", "", ts.ScriptTarget.Latest)));
-
-              const templateSpan = ts.factory.createTemplateSpan(
-                expression,
-                originalTail as ts.TemplateTail
-              );
-              // console.log(ts.createPrinter().printNode(ts.EmitHint.Unspecified, templateSpan, ts.createSourceFile("", "", ts.ScriptTarget.Latest)));
-
-              templates.push(templateSpan);
+            if (!param) {
+              continue
             }
+
+            const expression = ts.factory.createPropertyAccessExpression(
+              ts.factory.createIdentifier("request.params"),
+              ts.factory.createIdentifier(param)
+            );
+
+            const originalTail = templateSpans.templateSpans.find((span) => span.expression === templateSpansExpression)?.literal;
+            // console.log(ts.createPrinter().printNode(ts.EmitHint.Unspecified, originalTail as ts.TemplateTail, ts.createSourceFile("", "", ts.ScriptTarget.Latest)));
+
+            const templateSpan = ts.factory.createTemplateSpan(
+              expression,
+              originalTail as ts.TemplateTail
+            );
+            // console.log(ts.createPrinter().printNode(ts.EmitHint.Unspecified, templateSpan, ts.createSourceFile("", "", ts.ScriptTarget.Latest)));
+
+            templates.push(templateSpan);
           }
 
-          const newTemplateExpression = ts.factory.createTemplateExpression(
-            // ts.factory.createTemplateHead(""),
-            originalHead,
-            templates
-          );
-          // console.log(ts.createPrinter().printNode(ts.EmitHint.Unspecified, newTemplateExpression, ts.createSourceFile("", "", ts.ScriptTarget.Latest)));
+          if (ts.isPropertyAccessExpression(templateSpansExpression)) {
+            const expression = ts.factory.createPropertyAccessExpression(
+              // ts.factory.createIdentifier("request.params"),
+              ts.factory.createIdentifier("request.body"),
+              templateSpansExpression.name
+            );
 
-          const newObjectLiteralExpression = ts.factory.createObjectLiteralExpression(
-            [
-              ts.factory.createPropertyAssignment(
-                ts.factory.createIdentifier("message"),
-                newTemplateExpression
-              )
-            ]
-          );
+            const originalTail = templateSpans.templateSpans.find((span) => span.expression === templateSpansExpression)?.literal;
+            // console.log(ts.createPrinter().printNode(ts.EmitHint.Unspecified, originalTail as ts.TemplateTail, ts.createSourceFile("", "", ts.ScriptTarget.Latest)));
 
-          const newReturnStatement = ts.factory.createReturnStatement(newObjectLiteralExpression);
+            const templateSpan = ts.factory.createTemplateSpan(
+              expression,
+              originalTail as ts.TemplateTail
+            );
+            // console.log(ts.createPrinter().printNode(ts.EmitHint.Unspecified, templateSpan, ts.createSourceFile("", "", ts.ScriptTarget.Latest)));
 
-          returnExpression = newReturnStatement.expression;
-          // console.log(ts.createPrinter().printNode(ts.EmitHint.Unspecified, newReturnStatement, ts.createSourceFile("", "", ts.ScriptTarget.Latest)));
+            templates.push(templateSpan);
+          }
         }
+
+        const newTemplateExpression = ts.factory.createTemplateExpression(
+          // ts.factory.createTemplateHead(""),
+          originalHead,
+          templates
+        );
+        // console.log(ts.createPrinter().printNode(ts.EmitHint.Unspecified, newTemplateExpression, ts.createSourceFile("", "", ts.ScriptTarget.Latest)));
+
+        const newObjectLiteralExpression = ts.factory.createObjectLiteralExpression(
+          [
+            ts.factory.createPropertyAssignment(
+              ts.factory.createIdentifier("message"),
+              newTemplateExpression
+            )
+          ]
+        );
+
+        const newReturnStatement = ts.factory.createReturnStatement(newObjectLiteralExpression);
+
+        returnExpression = newReturnStatement.expression;
+        console.log(ts.createPrinter().printNode(ts.EmitHint.Unspecified, newReturnStatement, ts.createSourceFile("", "", ts.ScriptTarget.Latest)));
       }
     }
   }
+  // }
 
   const handler = ts.factory.createArrowFunction(
     undefined,
@@ -243,7 +278,7 @@ function buildFastifyRouteHandler(func: ts.FunctionDeclaration) {
 
   return {
     handler,
-    route: route.routePath
+    route: params.routePath
   }
 }
 
