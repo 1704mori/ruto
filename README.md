@@ -1,4 +1,6 @@
-# Ruto
+# Ruto - WIP
+
+Dynamically register routes based on files in the `routes` directory.
 
 Running
 ```bash
