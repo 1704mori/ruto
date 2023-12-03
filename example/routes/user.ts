@@ -5,8 +5,8 @@ export function get(name: string, surname: string, age: number) {
   }
 }
 
-export function post() {
+export function post(body: { name: string }) {
   return {
-    message: `post!`,
+    message: `Hello ${body.name}!`,
   };
 }
