@@ -1,6 +1,6 @@
-export function get() {
+export function get(name: string, surname: string, age: number) {
   return {
-    message: `Helloss!`,
+    message: `Hello ${name} ${surname}! You are ${age} years old!`,
     timestamp: new Date(),
   }
 }
