@@ -106,7 +106,32 @@ function buildFastifyWithMethod({ method, routePath, func }:
   );
 }
 
+function buildRoutePath(func: ts.FunctionDeclaration) {
+  const parameters = func.parameters;
+
+  if (!parameters || parameters.length === 0) {
+    return { routePath: "", params: [] }
+  }
+
+  let routePath = "";
+  const params: string[] = [];
+
+  for (const param of parameters) {
+    if (param.type && ts.isToken(param.type)) {
+      params.push((param.name as ts.Identifier).escapedText as string);
+      routePath += `/:${(param.name as ts.Identifier).escapedText}`;
+    }
+  }
+
+  return {
+    routePath,
+    params
+  }
+}
+
 function buildFastifyRouteHandler(func: ts.FunctionDeclaration) {
+  const route = buildRoutePath(func);
+
   const parameters = ts.factory.createNodeArray([
     ts.factory.createParameterDeclaration(
       undefined,
@@ -124,7 +149,73 @@ function buildFastifyRouteHandler(func: ts.FunctionDeclaration) {
     ),
   ]);
 
-  return ts.factory.createArrowFunction(
+  let returnExpression = getRouteReturnStatement(func)?.expression;
+
+  if (route.params.length > 0) {
+    if (returnExpression && ts.isObjectLiteralExpression(returnExpression)) {
+      const properties = returnExpression.properties;
+
+      if (properties && properties.length > 0) {
+        // @ts-ignore
+        const templateSpans = properties.find((prop) => ts.isTemplateExpression(prop.initializer))?.initializer as ts.TemplateExpression;
+        const originalHead = templateSpans.head;
+
+        const templates: ts.TemplateSpan[] = [];
+
+        if (templateSpans) {
+          const templateSpansExpressions = templateSpans.templateSpans.map((span) => span.expression);
+
+          for (const templateSpansExpression of templateSpansExpressions) {
+            if (ts.isIdentifier(templateSpansExpression)) {
+              const param = route.params.find((param) => param === templateSpansExpression.escapedText);
+              if (!param) {
+                continue
+              }
+
+              const expression = ts.factory.createPropertyAccessExpression(
+                ts.factory.createIdentifier("request.params"),
+                ts.factory.createIdentifier(param)
+              );
+
+              const originalTail = templateSpans.templateSpans.find((span) => span.expression === templateSpansExpression)?.literal;
+              // console.log(ts.createPrinter().printNode(ts.EmitHint.Unspecified, originalTail as ts.TemplateTail, ts.createSourceFile("", "", ts.ScriptTarget.Latest)));
+
+              const templateSpan = ts.factory.createTemplateSpan(
+                expression,
+                originalTail as ts.TemplateTail
+              );
+              // console.log(ts.createPrinter().printNode(ts.EmitHint.Unspecified, templateSpan, ts.createSourceFile("", "", ts.ScriptTarget.Latest)));
+
+              templates.push(templateSpan);
+            }
+          }
+
+          const newTemplateExpression = ts.factory.createTemplateExpression(
+            // ts.factory.createTemplateHead(""),
+            originalHead,
+            templates
+          );
+          // console.log(ts.createPrinter().printNode(ts.EmitHint.Unspecified, newTemplateExpression, ts.createSourceFile("", "", ts.ScriptTarget.Latest)));
+
+          const newObjectLiteralExpression = ts.factory.createObjectLiteralExpression(
+            [
+              ts.factory.createPropertyAssignment(
+                ts.factory.createIdentifier("message"),
+                newTemplateExpression
+              )
+            ]
+          );
+
+          const newReturnStatement = ts.factory.createReturnStatement(newObjectLiteralExpression);
+
+          returnExpression = newReturnStatement.expression;
+          // console.log(ts.createPrinter().printNode(ts.EmitHint.Unspecified, newReturnStatement, ts.createSourceFile("", "", ts.ScriptTarget.Latest)));
+        }
+      }
+    }
+  }
+
+  const handler = ts.factory.createArrowFunction(
     undefined,
     undefined,
     parameters,
@@ -140,7 +231,7 @@ function buildFastifyRouteHandler(func: ts.FunctionDeclaration) {
             ),
             undefined,
             [
-              getRouteReturnStatement(func)?.expression ?? ts.factory.createNull()
+              returnExpression ?? ts.factory.createNull()
             ]
           )
         )
@@ -148,6 +239,12 @@ function buildFastifyRouteHandler(func: ts.FunctionDeclaration) {
       true
     )
   );
+
+
+  return {
+    handler,
+    route: route.routePath
+  }
 }
 
 export async function generateFastifyRoutes() {
@@ -155,17 +252,18 @@ export async function generateFastifyRoutes() {
 
   for (const [route, funcs] of routesMap) {
     for (const func of funcs) {
+      // await fs.writeFile(`${func.name.text}.json`, JSON.stringify(func, null, 2));
       const hasReturn = checkIfBlockHasReturn(func.body!);
 
       const method = func.name?.text as typeof METHODS[number];
-      const routePath = route.replace(".ts", "");
+      const basePath = route.replace(".ts", "");
 
       if (!hasReturn) {
-        console.log(`Route ${method.toUpperCase()} /${routePath} does not have a return statement\n`);
+        console.log(`Route ${method.toUpperCase()} /${basePath} does not have a return statement\n`);
         continue;
       }
 
-      const handlerFunction = buildFastifyRouteHandler(func);
+      const { handler: handlerFunction, route: routePath } = buildFastifyRouteHandler(func);
 
       const result = ts.transpileModule(ts
         .createPrinter()
@@ -183,7 +281,7 @@ export async function generateFastifyRoutes() {
       const handler = eval(result.outputText);
       fastifyInstance.route({
         method,
-        url: `/${routePath}`,
+        url: `/${basePath}${routePath}`,
         handler
       });
     }
