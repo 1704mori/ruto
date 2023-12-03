@@ -1,8 +1,8 @@
 export function get() {
-  // return {
-  //   message: `Hello!`,
-  //   timestamp: new Date(),
-  // };
+  return {
+    message: `Helloss!`,
+    timestamp: new Date(),
+  }
 }
 
 export function post() {
