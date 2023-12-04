@@ -4,7 +4,8 @@ Dynamically register routes based on files in the `routes` directory.
 
 Running
 ```bash
-npx tsx example/index.ts
+npx tsx example/index.ts # or
+npm run dev
 ```
 
 Example:
