@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "tsx example/index.ts"
+    "dev": "tsx watch example/index.ts"
   },
   "keywords": [],
   "author": "",

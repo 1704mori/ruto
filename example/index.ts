@@ -1,20 +1,26 @@
-import path from "path"
-import { transformRoutesPlugin } from "../src"
+import path from "path";
+import { ruto } from "../src";
 
-import Fastify from 'fastify'
-const fastify = Fastify({
-  logger: true
-})
+import Fastify from "fastify";
 
-fastify.register(transformRoutesPlugin, {
-  routesPath: path.join(__dirname, "routes")
-})
+(async () => {
+  const fastify = await Fastify({
+    logger: true,
+  });
 
-fastify.listen({ port: 3333 }, (err, address) => {
-  if (err) {
-    console.error(err)
-    process.exit(1)
-  }
+  await fastify.register(ruto, {
+    routesPath: path.join(__dirname, "routes"),
+  });
 
-  console.log(`Server listening on ${address}`)
-})
+  fastify.printRoutes();
+  fastify.printPlugins();
+
+  fastify.listen({ port: 3333 }, (err, address) => {
+    if (err) {
+      console.error(err);
+      process.exit(1);
+    }
+
+    console.log(`Server listening on ${address}`);
+  });
+})();
