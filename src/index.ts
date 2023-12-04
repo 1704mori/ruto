@@ -1,9 +1,10 @@
-import ts from "typescript";
-import { watcher, transformRoutesPlugin } from "./ruto";
+import { transformRoutesPlugin } from "./ruto";
+import fastifyPlugin from "fastify-plugin";
 
-(async () => {
-  // create a watcher for the routesPath and regenerate the routes when it changes
-  // watcher()
-})()
+type PluginOpts = {
+  routesPath: string;
+};
 
-export { transformRoutesPlugin }
+export const ruto = fastifyPlugin<PluginOpts>(transformRoutesPlugin, {
+  name: "ruto",
+});
