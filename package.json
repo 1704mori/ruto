@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "bin": {
-    "ruto": "./lib/src/cli.js"
+    "ruto": "./dist/cli.js"
   },
   "scripts": {
     "dev": "tsx watch example/index.ts",
