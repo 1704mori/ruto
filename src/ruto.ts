@@ -1,39 +1,16 @@
 import ts from "typescript";
 import fastify, * as f from "fastify";
 import path from "node:path";
-import fs from "node:fs/promises";
 
 import {
   checkIfBlockHasReturn,
   getExportedFunctions,
   getRouteReturnStatement,
 } from "./utils/ast";
-import { METHODS } from "./utils/common";
+import { METHODS, readRoutesFolder } from "./utils/common";
 
 export let routesPath: string;
 let fastifyInstance: f.FastifyInstance;
-
-async function readRoutesFolder(): Promise<[string[] | null, string | null]> {
-  if (!(await fs.stat(routesPath))) {
-    return [null, "routes folder not found"];
-  }
-
-  const routes: any[] = [];
-
-  for (const route of await fs.readdir(routesPath)) {
-    // import here so we have "hot reload" or "watch" while in dev mode
-    // maybe there's a better way? idk
-    await import(path.join(routesPath, route));
-
-    // if ((await fs.stat(route)).isDirectory()) {
-    //   continue;
-    // }
-
-    routes.push(route);
-  }
-
-  return [routes, null];
-}
 
 const routesMap = new Map<string, ts.FunctionDeclaration[]>();
 
@@ -56,6 +33,9 @@ async function getRoutes() {
       continue;
     }
 
+    // import here so we have "hot reload" or "watch" while in dev mode
+    // maybe there's a better way? idk
+    await import(filePath);
     routesMap.set(route, exportedFunctions);
   }
 }
@@ -190,7 +170,7 @@ function buildFastifyRouteHandler(func: ts.FunctionDeclaration) {
 
     if (properties && properties.length > 0) {
       // @ts-ignore
-      const templateSpans = properties.find((prop) =>
+      const templateSpans = (properties as any).find((prop: any) =>
         ts.isTemplateExpression(prop.initializer),
       )?.initializer as ts.TemplateExpression;
       const templates: ts.TemplateSpan[] = [];
@@ -372,9 +352,9 @@ async function recreateFastifyInstance() {
   fastifyInstance = fastify();
 }
 
-export async function watcher() {
+export async function watcher(configRoot = "./") {
   const configPath = ts.findConfigFile(
-    /*searchPath*/ "./",
+    configRoot,
     ts.sys.fileExists,
     "tsconfig.json",
   );
