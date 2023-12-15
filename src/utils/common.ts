@@ -15,6 +15,10 @@ export async function readRoutesFolder(
 
   console.log("[ruto]: reading routes from %s", routesPath);
 
+  if (routesPath.endsWith(".ts") || routesPath.endsWith(".js")) {
+    routesPath = routesPath.split("/").slice(0, -1).join("/");
+  }
+
   if (!(await fs.stat(routesPath))) {
     return [null, "routes folder not found"];
   }
@@ -25,6 +29,14 @@ export async function readRoutesFolder(
     // if ((await fs.stat(route)).isDirectory()) {
     //   continue;
     // }
+
+    const hasRoute = routes.some((r) => {
+      const _r = r.split(".")[0];
+      return new RegExp(_r).test(route);
+    });
+    if (hasRoute) {
+      continue;
+    }
 
     routes.push(route);
   }
