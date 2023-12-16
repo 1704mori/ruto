@@ -23,4 +23,5 @@ curl localhost:3333/user/satoshi/pikachu/123
 ```
 
 ### todo
-- [ ] parse everything in the return statement
+- [ ] (wip) build variable declarations
+- [ ] (wip) parse everything in the return statement
