@@ -2,15 +2,17 @@
 
 Dynamically register routes based on files in the `routes` directory.
 
-Running
+Running (dev mode)
 ```bash
 npm run dev
+npm run build:link # in case you want to run the ruto-example
 ```
 
-Linking
+Running (link mode)
 ```bash
-npm run build:link #then
+git clone https://github.com/1704mori/ruto-example.git # clone somewhere else
 npm link ruto
+npm run gen
 ```
 
 Example:
