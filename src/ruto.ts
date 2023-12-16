@@ -1,12 +1,11 @@
 import ts from "typescript";
 import fastify, * as f from "fastify";
 import path from "node:path";
+import fs from "node:fs/promises";
 
 import {
   checkIfBlockHasReturn,
   getExportedFunctions,
-  getRouteReturnStatement,
-  parseRouteReturn,
 } from "./utils/ast";
 import { METHODS, readRoutesFolder } from "./utils/common";
 import { buildFastifyAsExport, buildImport } from "./builder/exported";
@@ -64,7 +63,7 @@ export async function generateFastifyRoutes(root: string) {
 
   for (const [route, funcs] of routesMap) {
     for (const func of funcs) {
-      // await fs.writeFile(`${func.name.text}.json`, JSON.stringify(func, null, 2));
+      await fs.writeFile(`${func.name?.text}.json`, JSON.stringify(func, null, 2));
       const hasReturn = checkIfBlockHasReturn(func.body!);
 
       const method = func.name?.text as (typeof METHODS)[number];
