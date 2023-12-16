@@ -21,3 +21,6 @@ curl -X POST localhost:3333/user -H 'Content-Type: application/json' -d '{"name"
 
 curl localhost:3333/user/satoshi/pikachu/123
 ```
+
+### todo
+- [ ] parse everything in the return statement
