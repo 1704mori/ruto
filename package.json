@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "cross-env NODE_ENV=dev tsx watch example/index.ts",
-    "build:cli": "tsc src/cli.ts"
+    "build:link": "tsc && npm link"
   },
   "keywords": [],
   "author": "",
