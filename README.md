@@ -4,8 +4,13 @@ Dynamically register routes based on files in the `routes` directory.
 
 Running
 ```bash
-npx tsx example/index.ts # or
 npm run dev
+```
+
+Linking
+```bash
+npm run build:link #then
+npm link ruto
 ```
 
 Example:
