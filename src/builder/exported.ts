@@ -1,7 +1,7 @@
 import ts from "typescript";
-import { checkIfBlockHasReturn, parseRouteReturn } from "../utils/ast";
+import { checkIfBlockHasReturn, getRouteReturnStatement, parseRouteVariablesDeclaration } from "../utils/ast";
 import { METHODS } from "http";
-import { buildVerbParams } from "../utils/common";
+import { buildBlock, buildVerbParams } from "../utils/common";
 
 export function buildImport() {
   return ts.factory.createImportDeclaration(
@@ -40,7 +40,7 @@ export function buildFastifyAsExport(
         basePath = `${basePath}${params.routePath}`;
       }
 
-      const returnExpression = parseRouteReturn(func, params);
+      const block = buildBlock(func, params);
 
       const _method = ts.factory.createCallExpression(
         ts.factory.createPropertyAccessExpression(
@@ -71,21 +71,22 @@ export function buildFastifyAsExport(
             ],
             undefined,
             undefined,
-            ts.factory.createBlock(
-              [
-                ts.factory.createExpressionStatement(
-                  ts.factory.createCallExpression(
-                    ts.factory.createPropertyAccessExpression(
-                      ts.factory.createIdentifier("reply"),
-                      ts.factory.createIdentifier("send"),
-                    ),
-                    undefined,
-                    [returnExpression ?? ts.factory.createNull()],
-                  ),
-                ),
-              ],
-              true,
-            ),
+            // ts.factory.createBlock(
+            //   [
+            //     ts.factory.createExpressionStatement(
+            //       ts.factory.createCallExpression(
+            //         ts.factory.createPropertyAccessExpression(
+            //           ts.factory.createIdentifier("reply"),
+            //           ts.factory.createIdentifier("send"),
+            //         ),
+            //         undefined,
+            //         [block ?? ts.factory.createNull()],
+            //       ),
+            //     ),
+            //   ],
+            //   true,
+            // ),
+            block
           ),
         ],
       );
