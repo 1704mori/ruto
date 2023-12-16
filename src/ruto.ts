@@ -112,63 +112,6 @@ export async function generateFastifyRoutes(root: string) {
 export async function generateFastifyRoutesAsMethods(root: string) {
   await getRoutes(root);
 
-  // for (const [route, funcs] of routesMap) {
-  //   for (const func of funcs) {
-  //     // await fs.writeFile(`${func.name.text}.json`, JSON.stringify(func, null, 2));
-  //     const hasReturn = checkIfBlockHasReturn(func.body!);
-
-  //     const method = func.name?.text as (typeof METHODS)[number];
-  //     const basePath = route.replace(".ts", "").replace(".js", "");
-
-  //     if (!hasReturn) {
-  //       console.log(
-  //         `Route ${method.toUpperCase()} /${basePath} does not have a return statement\n`,
-  //       );
-  //       continue;
-  //     }
-
-  //     const { fastifyImport, exportDefaultAsyncFunction } =
-  //       buildFastifyAsExport({
-  //         method,
-  //         routePath: basePath,
-  //         func,
-  //       });
-
-  //     const statements: ts.Statement[] = [
-  //       fastifyImport,
-  //       exportDefaultAsyncFunction,
-  //     ];
-
-  //     const sourceFile = ts.factory.createSourceFile(
-  //       statements,
-  //       ts.factory.createToken(ts.SyntaxKind.EndOfFileToken),
-  //       ts.NodeFlags.None,
-  //     );
-
-  //     const result = ts.transpileModule(
-  //       ts
-  //         .createPrinter()
-  //         .printNode(
-  //           ts.EmitHint.Unspecified,
-  //           sourceFile,
-  //           ts.createSourceFile("", "", ts.ScriptTarget.Latest),
-  //         ),
-  //       {
-  //         compilerOptions: {
-  //           target: ts.ScriptTarget.ESNext,
-  //           module: ts.ModuleKind.ESNext,
-  //         },
-  //       },
-  //     );
-
-  //     routes.push({
-  //       result,
-  //       method,
-  //       endpoint: `/${basePath}`,
-  //     });
-  //   }
-  // }
-
   const fastifyImport = buildImport();
   const exportDefaultAsyncFunction = buildFastifyAsExport(routesMap);
 
