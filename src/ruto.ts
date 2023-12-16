@@ -369,7 +369,7 @@ function buildFastifyRouteHandler(func: ts.FunctionDeclaration) {
   };
 }
 
-export async function generateFastifyRoutes(root?: string) {
+export async function generateFastifyRoutes(root: string) {
   await getRoutes(root);
 
   const routes: {
@@ -425,7 +425,7 @@ export async function generateFastifyRoutes(root?: string) {
   // listRoutes();
 }
 
-export async function generateFastifyRoutesAsMethods(root?: string) {
+export async function generateFastifyRoutesAsMethods(root: string) {
   await getRoutes(root);
 
   const routes: {
@@ -555,7 +555,6 @@ export async function transformRoutesPlugin(
   routesPath = opts.routesPath;
 
   const routes = await generateFastifyRoutes(routesPath);
-  console.log("generated routes %o", routes);
   injectRoutes(routes);
   // await watcher();\
 }
