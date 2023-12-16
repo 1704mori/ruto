@@ -7,7 +7,7 @@
     "ruto": "./dist/cli.js"
   },
   "scripts": {
-    "dev": "tsx watch example/index.ts",
+    "dev": "cross-env NODE_ENV=dev tsx watch example/index.ts",
     "build:cli": "tsc src/cli.ts"
   },
   "keywords": [],
@@ -15,6 +15,7 @@
   "license": "ISC",
   "devDependencies": {
     "@types/node": "^20.10.2",
+    "cross-env": "^7.0.3",
     "tsx": "^4.6.2",
     "typescript": "^5.3.2"
   },
