@@ -25,3 +25,4 @@ curl localhost:3333/user/satoshi/pikachu/123
 ### todo
 - [ ] (wip) build variable declarations
 - [ ] (wip) parse everything in the return statement
+- [ ] nested folders
