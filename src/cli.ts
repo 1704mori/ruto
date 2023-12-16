@@ -39,12 +39,8 @@ prog
     for (const route of routes!) {
       const filePath = path.join(root, opts.routes, route);
       console.log("generating route for file: %s", filePath);
-      const metadata = await generateFastifyRoutesAsMethods(filePath);
-      console.log("metadata: %o", metadata);
-
-      for (const { result } of metadata) {
-        fs.writeFileSync(filePath, result.outputText);
-      }
+      const output = (await generateFastifyRoutesAsMethods(filePath)).outputText;
+      fs.writeFileSync(filePath, output);
     }
   });
 

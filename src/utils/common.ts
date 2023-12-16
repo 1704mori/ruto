@@ -1,5 +1,5 @@
-import path from "node:path";
 import fs from "node:fs/promises";
+import ts from "typescript";
 
 export const METHODS = ["get", "post", "put", "delete"] as const;
 
@@ -35,4 +35,45 @@ export async function readRoutesFolder(
   }
 
   return [routes, null];
+}
+
+export function buildVerbParams(func: ts.FunctionDeclaration) {
+  const parameters = func.parameters;
+
+  if (!parameters || parameters.length === 0) {
+    return { routePath: "", params: [], bodyParams: [] };
+  }
+
+  let routePath = "";
+  const params: string[] = [];
+  const bodyParams: string[] = [];
+
+  for (const param of parameters) {
+    if (param.type && ts.isToken(param.type)) {
+      params.push((param.name as ts.Identifier).escapedText as string);
+      routePath += `/:${(param.name as ts.Identifier).escapedText}`;
+    }
+
+    if (param.type && ts.isTypeLiteralNode(param.type)) {
+      const properties = param.type.members;
+
+      if (!properties || properties.length === 0) {
+        continue;
+      }
+
+      for (const property of properties) {
+        if (ts.isPropertySignature(property)) {
+          bodyParams.push(
+            (property.name as ts.Identifier).escapedText as string,
+          );
+        }
+      }
+    }
+  }
+
+  return {
+    routePath,
+    params,
+    bodyParams,
+  };
 }
