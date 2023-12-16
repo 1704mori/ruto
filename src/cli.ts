@@ -3,7 +3,12 @@ import { Command } from "commander";
 import { readRoutesFolder } from "./utils/common";
 import path from "node:path";
 import fs from "node:fs";
-import { generateFastifyRoutes, generateFastifyRoutesAsMethods } from "./ruto";
+import { generateFastifyRoutesAsMethods } from "./ruto";
+
+// just a redundancy in case NODE_ENV
+// is still 'dev' so it doens't
+// cause errors while generating routes
+process.env.NODE_ENV = "gen";
 
 const prog = new Command("ruto");
 
@@ -36,7 +41,7 @@ prog
       console.log("generating route for file: %s", filePath);
       const metadata = await generateFastifyRoutesAsMethods(filePath);
       console.log("metadata: %o", metadata);
-      
+
       for (const { result } of metadata) {
         fs.writeFileSync(filePath, result.outputText);
       }

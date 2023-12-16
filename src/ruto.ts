@@ -1,6 +1,6 @@
 import ts from "typescript";
 import fastify, * as f from "fastify";
-import path, { parse } from "node:path";
+import path from "node:path";
 
 import {
   checkIfBlockHasReturn,
@@ -9,12 +9,12 @@ import {
 } from "./utils/ast";
 import { METHODS, readRoutesFolder } from "./utils/common";
 
-export let routesPath: string;
+export let routesPath: string = "";
 let fastifyInstance: f.FastifyInstance;
 
 const routesMap = new Map<string, ts.FunctionDeclaration[]>();
 
-async function getRoutes(root?: string) {
+async function getRoutes(root: string) {
   const [routes, error] = await readRoutesFolder(root);
 
   if (!routesPath && root) {
@@ -29,8 +29,10 @@ async function getRoutes(root?: string) {
   for (const route of routes!) {
     let filePath = path.join(routesPath, route);
 
-    if (filePath.endsWith(".ts") || filePath.endsWith(".js")) {
-      filePath = filePath.split("/").slice(0, -1).join("/");
+    if (process.env.NODE_ENV != "dev") {
+      if (filePath.endsWith(".ts") || filePath.endsWith(".js")) {
+        filePath = filePath.split("/").slice(0, -1).join("/");
+      }
     }
 
     const program = ts.createProgram([filePath], { allowJs: true });
@@ -42,9 +44,8 @@ async function getRoutes(root?: string) {
       continue;
     }
 
-    // import here so we have "hot reload" or "watch" while in dev mode
-    // maybe there's a better way? idk
-    !root && (await import(filePath));
+    // check index.ts line 12
+    process.env.NODE_ENV == "dev" && (await import(filePath));
     routesMap.set(route, exportedFunctions);
   }
 }
@@ -306,9 +307,7 @@ function buildFastifyAsExport({
       ],
       undefined,
       ts.factory.createBlock(
-        [
-          ts.factory.createExpressionStatement(_method),
-        ],
+        [ts.factory.createExpressionStatement(_method)],
         true,
       ),
     ),
@@ -555,7 +554,8 @@ export async function transformRoutesPlugin(
   fastifyInstance = fastify;
   routesPath = opts.routesPath;
 
-  const routes = await generateFastifyRoutes();
+  const routes = await generateFastifyRoutes(routesPath);
+  console.log("generated routes %o", routes);
   injectRoutes(routes);
   // await watcher();\
 }
